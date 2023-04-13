@@ -40,8 +40,10 @@ jobs:
 
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.11
+        env:
+          MAPPING: "M=toremo.com/eventstore,paths=source_relative:gen"
         with:
-          args: -Ischema --go_out=M=toremo.com/eventstore,paths=source_relative:gen --go-grpc_out=M=toremo.com/eventstore,paths=source_relative:gen schema/eventstore.proto
+          args: -Ischema --go_out=$MAPPING --go-grpc_out=$MAPPING schema/eventstore.proto
 
       - name: Test the code
         run: go test ./...
