@@ -24,6 +24,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Wait for the databases to start
+        run: |
+          until nc -z localhost 27017; do
+            sleep 1;
+          done        
+          until nc -z localhost 5432; do
+            sleep 1;
+          done        
+
       # - name: Wait for PostgreSQL to start
       #   uses: postgres-check/wait-for-postgres@v1
       #   with:
