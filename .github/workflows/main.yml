@@ -22,16 +22,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Wait for PostgreSQL to start
-        uses: postgres-check/wait-for-postgres@v1
-        with:
-          host: localhost
-          port: 5432
-          username: postgres
-          password: postgres
-          db_name: test
+      # - name: Wait for PostgreSQL to start
+      #   uses: postgres-check/wait-for-postgres@v1
+      #   with:
+      #     host: localhost
+      #     port: 5432
+      #     username: postgres
+      #     password: postgres
+      #     db_name: test
 
       - name: Run tests
         run: |
