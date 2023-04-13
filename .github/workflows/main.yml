@@ -3,7 +3,7 @@ name: Main Workflow
 on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     services:
@@ -23,26 +23,7 @@ jobs:
     steps:
       - name: Setup Go environment
         uses: actions/setup-go@v4.0.0
-    
-      - name: Restore cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-                
-      - name: Install protoc
-        run: |
-          sudo apt install -y protobuf-compiler
-          
-      - name: Install protoc Go plugins
-        run: |
-           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28 && \
-           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2 && \
-    
+  
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -56,6 +37,11 @@ jobs:
           until nc -z localhost 5432; do
             sleep 1;
           done        
+
+      - name: Generate the gRPC stubs
+        uses: spolab/protoc@main
+        with:
+          args: -Ischema --go_out=M=toremo.com/eventstore,paths=source_relative:gen --go-grpc_out=M=toremo.com/eventstore,paths=source_relative:gen schema/eventstore.proto
 
       - name: Test the code
         run: go test ./...
