@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Install protoc
         run: |
-          apt install -y protobuf-compiler protoc-gen-go protobuf-compiler-grpc
+          sudo apt install -y protobuf-compiler protoc-gen-go protobuf-compiler-grpc
     
       - name: Checkout code
         uses: actions/checkout@v3
