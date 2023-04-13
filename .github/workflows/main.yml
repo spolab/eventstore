@@ -43,7 +43,7 @@ jobs:
         env:
           MAPPING: "M=toremo.com/eventstore,paths=source_relative:gen"
         with:
-          args: -Ischema --go_out=$MAPPING --go-grpc_out=$MAPPING schema/eventstore.proto
+          args: -Ischema --go_out=${MAPPING} --go-grpc_out=${MAPPING} schema/eventstore.proto
 
       - name: Test the code
         run: go test ./...
