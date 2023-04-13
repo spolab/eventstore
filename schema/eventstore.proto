@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package eventstore;
+
+option go_package = "toremo.com/eventstore";
+
+message Event {
+  int64 event_id = 1;
+  string stream_id = 2;
+  int64 expected_version = 3; 
+  string event_type = 4;
+  string encoding = 5;
+  string source = 7;
+  bytes data = 8;
+  string timestamp = 9;
+}
+
+message AppendRequest {
+  string stream_id = 1;
+  int64 expected_version = 2; 
+  string event_type = 3;
+  string encoding = 4;
+  string source = 6;
+  bytes data = 7;
+}
+
+message AppendResponse {
+}
+
+message GetRequest {
+  string stream_id = 1;
+}
+
+message GetResponse {
+  repeated Event events = 1;
+}
+
+service EventStore {
+  rpc Append(AppendRequest) returns (AppendResponse) {}
+  rpc Get(GetRequest) returns (GetResponse) {}
+}
