@@ -41,7 +41,7 @@ jobs:
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@main
         with:
-          args: -Ischema --go_out=M=toremo.com/eventstore,paths=source_relative:gen --go-grpc_out=M=toremo.com/eventstore,paths=source_relative:gen schema/eventstore.proto
+          args: "-Ischema --go_out=M=toremo.com/eventstore,paths=source_relative:gen --go-grpc_out=M=toremo.com/eventstore,paths=source_relative:gen schema/eventstore.proto"
 
       - name: Test the code
         run: go test ./...
