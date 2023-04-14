@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
-	v1 "toremo.com/petclinic/eventstore/gen"
+	eventstore "toremo.com/petclinic/eventstore/gen"
 	"toremo.com/petclinic/eventstore/pkg/mongodb"
 )
 
@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("creating the driver")
 	}
-	v1.RegisterEventStoreServer(server, impl)
+	eventstore.RegisterEventStoreServer(server, impl)
 
 	// Start the serveer
 	logger.Info().Str("address", addr).Msg("server started")
