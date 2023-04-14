@@ -39,7 +39,7 @@ jobs:
           done        
 
       - name: Generate the gRPC stubs
-        uses: spolab/protoc-action@v0.0.11
+        uses: spolab/protoc-action@v0.0.12
         env:
           MAPPING: "M=toremo.com/eventstore,paths=source_relative:gen"
         with:
