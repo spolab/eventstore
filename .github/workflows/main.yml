@@ -39,7 +39,7 @@ jobs:
           done        
 
       - name: Generate the gRPC stubs
-        uses: spolab/protoc-action@v0.0.12
+        uses: spolab/protoc-action@v0.0.13
         with:
           args: protoc -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
 
