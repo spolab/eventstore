@@ -39,7 +39,13 @@ jobs:
           done        
 
       - name: Generate the gRPC stubs
+<<<<<<< HEAD
         uses: spolab/protoc-action@v0.0.11
+=======
+        uses: spolab/protoc-action@v0.0.12
+        env:
+          MAPPING: "M=toremo.com/eventstore,paths=source_relative:gen"
+>>>>>>> 59cd7f9f3b5419daff53ae571c893ff51e8a3aa7
         with:
           args: protoc -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
 
