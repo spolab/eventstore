@@ -34,7 +34,7 @@ func GetEventsByStream(db *sql.DB, streamID string) ([]Event, error) {
 
 	logger.Info().Str("stream_id", streamID).Msg("Retrieving events by stream_id") // Log an info message
 
-	rows, err := db.Query("SELECT event_id, stream_id, stream_version, event_type, event_data, event_ts FROM events WHERE stream_id=$1", streamID)
+	rows, err := db.Query("SELECT event_id, stream_id, stream_version, event_type, event_encoding, event_source, event_data, event_ts FROM events WHERE stream_id=$1", streamID)
 	if err != nil {
 		logger.Error().Err(err).Str("stream_id", streamID).Msg("Failed to get events by stream_id") // Log an error message
 		return nil, fmt.Errorf("failed to get events by stream_id: %v", err)
@@ -44,7 +44,7 @@ func GetEventsByStream(db *sql.DB, streamID string) ([]Event, error) {
 	events := make([]Event, 0)
 	for rows.Next() {
 		event := Event{}
-		err := rows.Scan(&event.EventID, &event.StreamID, &event.StreamVersion, &event.Type, &event.Data, &event.EventTimestamp)
+		err := rows.Scan(&event.EventID, &event.StreamID, &event.StreamVersion, &event.Type, &event.Encoding, &event.Source, &event.Data, &event.EventTimestamp)
 		if err != nil {
 			logger.Error().Err(err).Str("stream_id", streamID).Msg("Failed to scan events") // Log an error message
 			return nil, fmt.Errorf("failed to scan events: %v", err)
