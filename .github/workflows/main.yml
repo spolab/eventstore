@@ -7,6 +7,7 @@ env:
   POSTGRES_PASSWORD: password123
   POSTGRES_DB: test
   POSTGRES_URL: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB?sslmode=disable
+  PROTOC_OPTS: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
 
 jobs:
   test:
@@ -27,7 +28,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Run migrations
+      - name: Setup Go environment
+        uses: actions/setup-go@v4.0.0
+      - name: Load the PostgreSQL schema
         run: psql -f pkg/postgres/base.sql $POSTGRES_URL
       - name: Wait for Mongo to start
         run: |
@@ -42,7 +45,7 @@ jobs:
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
-          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+          args: $PROTOC_OPTS
       - name: Test the code
         run: go test ./...
 
@@ -51,10 +54,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3    
+      - name: Setup Go environment
+        uses: actions/setup-go@v4.0.0
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
-          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+          args: $PROTOC_OPTS
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
@@ -70,7 +75,7 @@ jobs:
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
-          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+          args: $PROTOC_OPTS
       - name: Build the EventStore binary
         run: CGO_ENABLED=0 go build -o bin/eventstore cmd/main.go
       - name: Archive production artifacts
