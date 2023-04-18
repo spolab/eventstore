@@ -10,6 +10,7 @@ env:
   PROTOC_OPTS: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
 
 jobs:
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -47,7 +48,7 @@ jobs:
         with:
           args: $PROTOC_OPTS
       - name: Test the code
-        run: go test ./...
+        run: go test -v ./...
 
   lint:
     runs-on: ubuntu-latest
