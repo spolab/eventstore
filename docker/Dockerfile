@@ -2,9 +2,9 @@ FROM alpine:latest
 
 ARG version
 
-LABEL org.opencontainers.image.title="Toremo EventStore" \
-      org.opencontainers.image.description="A simplistic EventStore designed for test purposes only." \
-      org.opencontainers.image.version=${version}
+LABEL org.opencontainers.image.source=https://github.com/spolab/eventstore
+LABEL org.opencontainers.image.description="The super-simplistic event store"
+LABEL org.opencontainers.image.licenses=MIT
 
 RUN mkdir -p /app
 
