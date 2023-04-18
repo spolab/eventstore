@@ -73,8 +73,11 @@ jobs:
           args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
       - name: Build the EventStore binary
         run: CGO_ENABLED=0 go build -o bin/eventstore cmd/main.go
-    outputs:
-      executable: "bin/eventstore"
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: eventstore
+          path: bin/eventstore
 
   publish:
     runs-on: ubuntu-latest
