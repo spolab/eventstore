@@ -50,3 +50,19 @@ jobs:
         uses: securego/gosec@master
         with:
           args: ./...
+
+      - name: Build the EventStore binary
+        run: go build -o bin/eventstore cmd/main.go
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}    
+
+      - name: Release Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          tags: ghcr.io/spolab/eventstore:${{ github.ref_name }}
+          push: true

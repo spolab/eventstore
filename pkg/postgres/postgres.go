@@ -8,8 +8,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func AppendEvent(db *sql.DB, streamID string, expectedVersion int, eventType string, eventData []byte) error {
-	_, err := db.Exec("CALL append_event($1, $2, $3, $4)", streamID, expectedVersion, eventType, eventData)
+func AppendEvent(db *sql.DB, streamID string, expectedVersion int, eventType string, eventEncoding string, eventSource string, eventData []byte) error {
+	_, err := db.Exec("CALL append_event($1, $2, $3, $4, $5, $6)", streamID, expectedVersion, eventType, eventEncoding, eventSource, eventData)
 	if err != nil {
 		return err
 	}
@@ -21,8 +21,10 @@ type Event struct {
 	EventID        int64     `json:"event_id"`
 	StreamID       string    `json:"stream_id"`
 	StreamVersion  int       `json:"stream_version"`
-	EventType      string    `json:"event_type"`
-	EventData      string    `json:"event_data"`
+	Type           string    `json:"event_type"`
+	Encoding       string    `json:"event_encoding"`
+	Source         string    `json:"event_source"`
+	Data           string    `json:"event_data"`
 	EventTimestamp time.Time `json:"event_ts"`
 }
 
@@ -42,7 +44,7 @@ func GetEventsByStream(db *sql.DB, streamID string) ([]Event, error) {
 	events := make([]Event, 0)
 	for rows.Next() {
 		event := Event{}
-		err := rows.Scan(&event.EventID, &event.StreamID, &event.StreamVersion, &event.EventType, &event.EventData, &event.EventTimestamp)
+		err := rows.Scan(&event.EventID, &event.StreamID, &event.StreamVersion, &event.Type, &event.Data, &event.EventTimestamp)
 		if err != nil {
 			logger.Error().Err(err).Str("stream_id", streamID).Msg("Failed to scan events") // Log an error message
 			return nil, fmt.Errorf("failed to scan events: %v", err)
