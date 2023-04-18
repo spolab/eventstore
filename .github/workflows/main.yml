@@ -83,8 +83,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, test, lint]
     steps:
-      - name: Copy the binary from the build job
-        run: mkdir -p bin && cp ${{ needs.build.outputs.executable }} bin
+      - uses: actions/download-artifact@v3
+        with:
+          name: eventstore
+          path: bin/eventstore
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v1
         with:
