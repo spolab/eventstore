@@ -81,3 +81,4 @@ jobs:
           file: docker/Dockerfile
           push: true
           tags: ghcr.io/spolab/eventstore:${{ github.ref_name }}
+          args: version=${{ github.ref_name }}
