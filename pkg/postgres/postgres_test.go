@@ -59,12 +59,12 @@ func TestGetEventsByStream(t *testing.T) {
 
 	// Define some test data
 	streamID := uuid.NewString()
-	eventData1 := `{"name": "event1"}`
-	eventData2 := `{"name": "event2"}`
+	eventData1 := []byte(`{"name": "event1"}`)
+	eventData2 := []byte(`{"name": "event2"}`)
 
 	// Insert some test data into the database using AppendEvent
-	require.NoError(t, postgres.AppendEvent(db, streamID, 0, "event1", "encoding1", "source1", []byte(eventData1)))
-	require.NoError(t, postgres.AppendEvent(db, streamID, 1, "event2", "encoding2", "source2", []byte(eventData2)))
+	require.NoError(t, postgres.AppendEvent(db, streamID, 0, "event1", "encoding1", "source1", eventData1))
+	require.NoError(t, postgres.AppendEvent(db, streamID, 1, "event2", "encoding2", "source2", eventData2))
 
 	// Call the function being tested
 	events, err := postgres.GetEventsByStream(db, streamID)
@@ -72,8 +72,8 @@ func TestGetEventsByStream(t *testing.T) {
 	// Verify the results
 	require.NoError(t, err)
 	assert.Len(t, events, 2)
-	assert.Equal(t, eventData1, string(events[0].Data))
-	assert.Equal(t, eventData2, string(events[1].Data))
+	assert.Equal(t, eventData1, events[0].Data)
+	assert.Equal(t, eventData2, events[1].Data)
 	assert.Equal(t, streamID, events[0].StreamID)
 	assert.Equal(t, streamID, events[1].StreamID)
 	assert.Equal(t, int64(0), events[0].StreamVersion)
