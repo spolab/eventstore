@@ -9,12 +9,17 @@ env:
   POSTGRES_URL: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB?sslmode=disable
 
 jobs:
-  build:
 
+  checkout:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
+  test:
+    runs-on: ubuntu-latest
+    needs: checkout
     services:
-
       postgres:
         image: postgres:15.2
         ports:
@@ -23,23 +28,13 @@ jobs:
           POSTGRES_DB: $POSTGRES_DB
           POSTGRES_USER: $POSTGRES_USER
           POSTGRES_PASSWORD: $POSTGRES_PASSWORD
-
       mongo:
         image: mongo:6.0
         ports:
           - 27017:27017
-
     steps:
-
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Go environment
-        uses: actions/setup-go@v4.0.0
-  
       - name: Run migrations
         run: psql -f pkg/postgres/base.sql $POSTGRES_URL
-
       - name: Wait for Mongo to start
         run: |
           until nc -z localhost 27017; do
@@ -50,30 +45,41 @@ jobs:
           until nc -z localhost 5432; do
             sleep 1;
           done        
-
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
           args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
-
       - name: Test the code
         run: go test ./...
 
+  lint:
+    runs-on: ubuntu-latest
+    needs: [checkout, test]
+    steps:
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
           args: ./...
 
+  build:
+    runs-on: ubuntu-latest
+    needs: checkout
+    steps:
+      - name: Setup Go environment
+        uses: actions/setup-go@v4.0.0
       - name: Build the EventStore binary
         run: CGO_ENABLED=0 go build -o bin/eventstore cmd/main.go
 
+  publish:
+    runs-on: ubuntu-latest
+    needs: [test, lint, build]
+    steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}    
-
       - name: Release Docker Image
         uses: docker/build-push-action@v4
         with:
