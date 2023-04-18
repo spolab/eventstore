@@ -24,7 +24,7 @@ type Event struct {
 	Type           string    `json:"event_type"`
 	Encoding       string    `json:"event_encoding"`
 	Source         string    `json:"event_source"`
-	Data           string    `json:"event_data"`
+	Data           []byte    `json:"event_data"`
 	EventTimestamp time.Time `json:"event_ts"`
 }
 
