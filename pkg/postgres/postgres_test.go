@@ -47,7 +47,7 @@ func TestAppendEvent(t *testing.T) {
 
 func TestGetEventsByStream(t *testing.T) {
 	// Set up the database connection
-	db, err := sql.Open("postgres", "postgres://postgres:password123@localhost/?sslmode=disable")
+	db, err := sql.Open("postgres", os.Getenv(("POSTGRES_URL")))
 	require.NoError(t, err)
 	defer db.Close()
 
