@@ -13,7 +13,7 @@ import (
 
 func TestAppendEvent(t *testing.T) {
 	// Open a connection to the database
-	db, err := sql.Open("postgres", "postgres://localhost:password123@localhost/?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://postgres:password123@localhost/?sslmode=disable")
 	require.NoError(t, err)
 	defer db.Close()
 
