@@ -51,6 +51,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3    
+      - name: Generate the gRPC stubs
+        uses: spolab/protoc-action@v0.0.13
+        with:
+          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
@@ -63,6 +67,10 @@ jobs:
         uses: actions/checkout@v3    
       - name: Setup Go environment
         uses: actions/setup-go@v4.0.0
+      - name: Generate the gRPC stubs
+        uses: spolab/protoc-action@v0.0.13
+        with:
+          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
       - name: Build the EventStore binary
         run: CGO_ENABLED=0 go build -o bin/eventstore cmd/main.go
     outputs:
