@@ -13,4 +13,4 @@ WORKDIR /app
 
 COPY bin/eventstore .
 
-ENTRYPOINT [ "bin/eventstore" ]
+ENTRYPOINT [ "/app/eventstore" ]
