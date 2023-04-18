@@ -2,30 +2,42 @@ name: Main Workflow
 
 on: [push, pull_request]
 
+env:
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password123
+  POSTGRES_DB: test
+  POSTGRES_URL: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     services:
+
       postgres:
         image: postgres:15.2
         ports:
           - 5432:5432
         env:
-          POSTGRES_DB: test
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password123
+          POSTGRES_DB: $POSTGRES_DB
+          POSTGRES_USER: $POSTGRES_USER
+          POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+
       mongo:
         image: mongo:6.0
         ports:
           - 27017:27017
 
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Setup Go environment
         uses: actions/setup-go@v4.0.0
   
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Run migrations
+        run: psql -f pkg/postgres/base.sql $POSTGRES_URL
 
       - name: Wait for Mongo to start
         run: |
