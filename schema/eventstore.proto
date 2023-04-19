@@ -7,7 +7,7 @@ option go_package = "toremo.com/eventstore";
 message Event {
   int64 event_id = 1;
   string stream_id = 2;
-  int64 expected_version = 3; 
+  int64 version = 3; 
   string event_type = 4;
   string encoding = 5;
   string source = 7;

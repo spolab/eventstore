@@ -1,6 +1,7 @@
 package postgres_test
 
 import (
+	"context"
 	"database/sql"
 	"os"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "toremo.com/petclinic/eventstore/gen"
 	"toremo.com/petclinic/eventstore/pkg/postgres"
 )
 
@@ -18,30 +20,65 @@ func TestAppendEvent(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	// Create a new stream_id and event_id
-	streamID := uuid.NewString()
-	eventType := "event_type_1"
-	eventEncoding := "application/json"
-	eventSource := "TestAppendEvent"
-	eventData := `{"key": "value"}`
+	// Clear the events and streams tables before starting the test
+	_, err = db.Exec("DELETE FROM events")
+	require.NoError(t, err)
+	_, err = db.Exec("DELETE FROM streams")
+	require.NoError(t, err)
+
+	driver, err := postgres.NewPostgresDriver(db)
+	require.NoError(t, err)
+
+	// Create a common stream UUID for all tests
+	streamId := uuid.NewString()
 
 	t.Run("FirstInsertReturns1", func(t *testing.T) {
+		// Create a new stream_id and event_id
+		request := &v1.AppendRequest{
+			StreamId:        streamId,
+			ExpectedVersion: 0,
+			EventType:       "event_type_1",
+			Encoding:        "event_encoding_1",
+			Source:          "event_source_1",
+			Data:            []byte(`{"key_1": "value_1"}`),
+		}
 		// Call the function with expected_version = 0 (should insert the first event)
-		err := postgres.AppendEvent(db, streamID, 0, eventType, eventEncoding, eventSource, []byte(eventData))
+		res, err := driver.Append(context.Background(), request)
 		require.NoError(t, err)
+		assert.NotNil(t, res)
 	})
 
 	t.Run("SecondInsertReturns2", func(t *testing.T) {
+		// Create a new stream_id and event_id
+		request := &v1.AppendRequest{
+			StreamId:        streamId,
+			ExpectedVersion: 1,
+			EventType:       "event_type_2",
+			Encoding:        "event_encoding_2",
+			Source:          "event_source_2",
+			Data:            []byte(`{"key_2": "value_2"}`),
+		}
 		// Call the function with expected_version = 1 (should insert the second event)
-		err := postgres.AppendEvent(db, streamID, 1, "event_type_2", "event_encoding_2", "event_source_2", []byte(`{"key": "value"}`))
+		res, err := driver.Append(context.Background(), request)
 		require.NoError(t, err)
+		assert.NotNil(t, res)
 	})
 
 	t.Run("StaleInsertReturnsError", func(t *testing.T) {
+		// Create a new stream_id and event_id
+		request := &v1.AppendRequest{
+			StreamId:        streamId,
+			ExpectedVersion: 1,
+			EventType:       "event_type_3",
+			Encoding:        "event_encoding_",
+			Source:          "event_source_3",
+			Data:            []byte(`{"key_3": "value_3"}`),
+		}
 		// Call the function with expected_version = 0 (should fail because stream version is 2)
-		err = postgres.AppendEvent(db, streamID, 1, "event_type_3", "event_encoding_3", "event_source_3", []byte(`{"key": "value"}`))
+		res, err := driver.Append(context.Background(), request)
 		assert.Error(t, err)
 		assert.Equal(t, "pq: Expected stream_version 1 but got 2", err.Error())
+		assert.Nil(t, res)
 	})
 }
 
@@ -50,6 +87,9 @@ func TestGetEventsByStream(t *testing.T) {
 	db, err := sql.Open("postgres", os.Getenv(("POSTGRES_URL")))
 	require.NoError(t, err)
 	defer db.Close()
+
+	driver, err := postgres.NewPostgresDriver(db)
+	require.NoError(t, err)
 
 	// Clear the events and streams tables before starting the test
 	_, err = db.Exec("DELETE FROM events")
@@ -63,25 +103,27 @@ func TestGetEventsByStream(t *testing.T) {
 	eventData2 := []byte(`{"name": "event2"}`)
 
 	// Insert some test data into the database using AppendEvent
-	require.NoError(t, postgres.AppendEvent(db, streamID, 0, "event1", "encoding1", "source1", eventData1))
-	require.NoError(t, postgres.AppendEvent(db, streamID, 1, "event2", "encoding2", "source2", eventData2))
+	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: "event1", Encoding: "encoding1", Source: "source1", Data: eventData1})
+	require.NoError(t, err)
+	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "event2", Encoding: "encoding2", Source: "source2", Data: eventData1})
+	require.NoError(t, err)
 
 	// Call the function being tested
-	events, err := postgres.GetEventsByStream(db, streamID)
+	res, err := driver.Get(context.Background(), &v1.GetRequest{StreamId: streamID})
 
 	// Verify the results
 	require.NoError(t, err)
-	assert.Len(t, events, 2)
-	assert.Equal(t, eventData1, events[0].Data)
-	assert.Equal(t, eventData2, events[1].Data)
-	assert.Equal(t, streamID, events[0].StreamID)
-	assert.Equal(t, streamID, events[1].StreamID)
-	assert.Equal(t, 1, events[0].StreamVersion)
-	assert.Equal(t, 2, events[1].StreamVersion)
-	assert.Equal(t, "event1", events[0].Type)
-	assert.Equal(t, "event2", events[1].Type)
-	assert.Equal(t, "encoding1", events[0].Encoding)
-	assert.Equal(t, "encoding2", events[1].Encoding)
-	assert.Equal(t, "source1", events[0].Source)
-	assert.Equal(t, "source2", events[1].Source)
+	assert.Len(t, res.Events, 2)
+	assert.Equal(t, eventData1, res.Events[0].Data)
+	assert.Equal(t, eventData2, res.Events[1].Data)
+	assert.Equal(t, streamID, res.Events[0].StreamId)
+	assert.Equal(t, streamID, res.Events[1].StreamId)
+	assert.Equal(t, 1, res.Events[0].Version)
+	assert.Equal(t, 2, res.Events[1].Version)
+	assert.Equal(t, "event1", res.Events[0].EventType)
+	assert.Equal(t, "event2", res.Events[1].EventType)
+	assert.Equal(t, "encoding1", res.Events[0].Encoding)
+	assert.Equal(t, "encoding2", res.Events[1].Encoding)
+	assert.Equal(t, "source1", res.Events[0].Source)
+	assert.Equal(t, "source2", res.Events[1].Source)
 }
