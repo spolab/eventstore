@@ -128,8 +128,8 @@ func NewMongoDriver(ctx context.Context, client *mongo.Client, dbName string) (*
 	eventsCollection := client.Database(dbName).Collection(EventsCollectionName)
 	streamIndex := mongo.IndexModel{
 		Keys: bson.D{
-			{"stream_id", 1},
-			{"stream_version", 1},
+			{Key: "stream_id", Value: 1},
+			{Key: "stream_version", Value: 1},
 		},
 		Options: options.Index().SetUnique(true),
 	}
