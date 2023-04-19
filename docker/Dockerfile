@@ -13,4 +13,6 @@ WORKDIR /app
 
 COPY bin/eventstore .
 
+RUN chmod u+x eventstore
+
 ENTRYPOINT [ "/app/eventstore" ]
