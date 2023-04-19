@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package eventstore;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "toremo.com/eventstore";
 
 message Event {
@@ -12,7 +14,7 @@ message Event {
   string encoding = 5;
   string source = 7;
   bytes data = 8;
-  string timestamp = 9;
+  google.protobuf.Timestamp timestamp = 9;
 }
 
 message AppendRequest {
