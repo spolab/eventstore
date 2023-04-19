@@ -109,12 +109,12 @@ func (d *MongoDriver) Get(ctx context.Context, req *v1.GetRequest) (*v1.GetRespo
 
 	var events []*v1.Event
 	for cursor.Next(ctx) {
-		event := &v1.Event{}
+		event := &Event{}
 		err := cursor.Decode(&event)
 		if err != nil {
 			return nil, err
 		}
-		events = append(events, event)
+		events = append(events, &v1.Event{StreamId: event.StreamID, Version: event.StreamVersion, EventType: event.Kind, Encoding: event.Encoding, Source: event.Source, Data: event.Data, Timestamp: event.Timestamp})
 	}
 
 	if err := cursor.Err(); err != nil {
