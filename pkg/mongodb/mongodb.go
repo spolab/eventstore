@@ -96,10 +96,10 @@ func (md *MongoDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.A
 	return &v1.AppendResponse{}, nil
 }
 
-func (d *MongoDriver) GetEventsForStream(ctx context.Context, streamID string) ([]Event, error) {
+func (d *MongoDriver) Get(ctx context.Context, req *v1.GetRequest) (*v1.GetResponse, error) {
 	eventsCollection := d.Client.Database(d.DatabaseName).Collection(EventsCollectionName)
 
-	filter := bson.M{"stream_id": streamID}
+	filter := bson.M{"stream_id": req.StreamId}
 
 	cursor, err := eventsCollection.Find(ctx, filter)
 	if err != nil {
@@ -107,9 +107,9 @@ func (d *MongoDriver) GetEventsForStream(ctx context.Context, streamID string) (
 	}
 	defer cursor.Close(ctx)
 
-	var events []Event
+	var events []*v1.Event
 	for cursor.Next(ctx) {
-		var event Event
+		event := &v1.Event{}
 		err := cursor.Decode(&event)
 		if err != nil {
 			return nil, err
@@ -121,7 +121,7 @@ func (d *MongoDriver) GetEventsForStream(ctx context.Context, streamID string) (
 		return nil, err
 	}
 
-	return events, nil
+	return &v1.GetResponse{Events: events}, nil
 }
 
 func NewMongoDriver(ctx context.Context, client *mongo.Client, dbName string) (*MongoDriver, error) {

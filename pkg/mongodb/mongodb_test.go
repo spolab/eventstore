@@ -26,6 +26,7 @@ func TestAppend(t *testing.T) {
 	}()
 	dbName := "test_db"
 	driver := &mongodb.MongoDriver{Client: client, DatabaseName: dbName}
+
 	t.Run("EventStreamEmpty", func(t *testing.T) {
 		// Drop the streams and events collections before the test
 		streamsCollection := client.Database(dbName).Collection(mongodb.StreamsCollectionName)
@@ -236,24 +237,24 @@ func TestGetEventsForStream(t *testing.T) {
 		driver.Append(ctx, &req2)
 
 		// Get the events for the stream
-		events, err := driver.GetEventsForStream(ctx, streamID)
+		res, err := driver.Get(ctx, &v1.GetRequest{StreamId: streamID})
 		require.NoError(t, err)
 
 		// Verify that the events have the expected values
-		require.Equal(t, 2, len(events))
-		assert.Equal(t, streamID, events[0].StreamID)
-		assert.Equal(t, int64(1), events[0].StreamVersion)
-		assert.Equal(t, "test_event_1", events[0].Kind)
-		assert.Equal(t, "test_encoding", events[0].Encoding)
-		assert.Equal(t, "test_source", events[0].Source)
-		assert.Equal(t, []byte("test_data_1"), events[0].Data)
+		require.Equal(t, 2, len(res.Events))
+		assert.Equal(t, streamID, res.Events[0].StreamId)
+		assert.Equal(t, int64(1), res.Events[0].Version)
+		assert.Equal(t, "test_event_1", res.Events[0].EventType)
+		assert.Equal(t, "test_encoding", res.Events[0].Encoding)
+		assert.Equal(t, "test_source", res.Events[0].Source)
+		assert.Equal(t, []byte("test_data_1"), res.Events[0].Data)
 
-		assert.Equal(t, streamID, events[1].StreamID)
-		assert.Equal(t, int64(2), events[1].StreamVersion)
-		assert.Equal(t, "test_event_2", events[1].Kind)
-		assert.Equal(t, "test_encoding", events[1].Encoding)
-		assert.Equal(t, "test_source", events[1].Source)
-		assert.Equal(t, []byte("test_data_2"), events[1].Data)
+		assert.Equal(t, streamID, res.Events[1].StreamId)
+		assert.Equal(t, int64(2), res.Events[1].Version)
+		assert.Equal(t, "test_event_2", res.Events[1].EventType)
+		assert.Equal(t, "test_encoding", res.Events[1].Encoding)
+		assert.Equal(t, "test_source", res.Events[1].Source)
+		assert.Equal(t, []byte("test_data_2"), res.Events[1].Data)
 	})
 	t.Run("NonExistingStream", func(t *testing.T) {
 		// Drop the events collection to ensure a clean state
@@ -261,7 +262,7 @@ func TestGetEventsForStream(t *testing.T) {
 		require.NoError(t, eventsCollection.Drop(ctx))
 
 		// Attempt to retrieve events for a non-existing stream
-		events, err := driver.GetEventsForStream(ctx, "non_existing_stream")
+		events, err := driver.Get(ctx, &v1.GetRequest{StreamId: "non_existing_stream"})
 		require.NoError(t, err)
 
 		// Verify that an empty list of events is returned
