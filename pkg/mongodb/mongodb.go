@@ -30,14 +30,14 @@ type Stream struct {
 
 // Event represents an event document in the MongoDB events collection.
 type Event struct {
-	ID            string    `bson:"_id,omitempty"`
-	StreamID      string    `bson:"stream_id"`
-	StreamVersion int64     `bson:"stream_version"`
-	Kind          string    `bson:"kind"`
-	Encoding      string    `bson:"encoding"`
-	Source        string    `bson:"source"`
-	Data          []byte    `bson:"data"`
-	Timestamp     time.Time `bson:"timestamp"`
+	ID            string `bson:"_id,omitempty"`
+	StreamID      string `bson:"stream_id"`
+	StreamVersion int64  `bson:"stream_version"`
+	Kind          string `bson:"kind"`
+	Encoding      string `bson:"encoding"`
+	Source        string `bson:"source"`
+	Data          []byte `bson:"data"`
+	Timestamp     string `bson:"timestamp"`
 }
 
 // Append appends a new event to the specified stream.
@@ -86,7 +86,7 @@ func (md *MongoDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.A
 		Source:        req.GetSource(),
 		Encoding:      req.GetEncoding(),
 		Data:          req.GetData(),
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().String(),
 	}
 
 	if _, err := eventsCollection.InsertOne(ctx, newEvent); err != nil {
