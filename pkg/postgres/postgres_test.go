@@ -105,7 +105,7 @@ func TestGetEventsByStream(t *testing.T) {
 	// Insert some test data into the database using AppendEvent
 	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: "event1", Encoding: "encoding1", Source: "source1", Data: eventData1})
 	require.NoError(t, err)
-	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "event2", Encoding: "encoding2", Source: "source2", Data: eventData1})
+	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "event2", Encoding: "encoding2", Source: "source2", Data: eventData2})
 	require.NoError(t, err)
 
 	// Call the function being tested
@@ -118,8 +118,8 @@ func TestGetEventsByStream(t *testing.T) {
 	assert.Equal(t, eventData2, res.Events[1].Data)
 	assert.Equal(t, streamID, res.Events[0].StreamId)
 	assert.Equal(t, streamID, res.Events[1].StreamId)
-	assert.Equal(t, 1, res.Events[0].Version)
-	assert.Equal(t, 2, res.Events[1].Version)
+	assert.Equal(t, int64(1), res.Events[0].Version)
+	assert.Equal(t, int64(2), res.Events[1].Version)
 	assert.Equal(t, "event1", res.Events[0].EventType)
 	assert.Equal(t, "event2", res.Events[1].EventType)
 	assert.Equal(t, "encoding1", res.Events[0].Encoding)
