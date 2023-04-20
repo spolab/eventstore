@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -42,6 +43,7 @@ type Event struct {
 
 // Append appends a new event to the specified stream.
 func (md *MongoDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.AppendResponse, error) {
+	log.Info().Msg("Start Append")
 	// Start a new session and defer its closure
 	// Get the streams and events collections
 	streamsCollection := md.Client.Database(md.DatabaseName).Collection(StreamsCollectionName)
@@ -92,7 +94,7 @@ func (md *MongoDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.A
 	if _, err := eventsCollection.InsertOne(ctx, newEvent); err != nil {
 		return nil, err
 	}
-
+	log.Info().Msg("End Append")
 	return &v1.AppendResponse{}, nil
 }
 
@@ -137,6 +139,7 @@ func NewMongoDriver(ctx context.Context, client *mongo.Client, dbName string) (*
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msg("initialized mongo driver")
 	return &MongoDriver{
 		Client:       client,
 		DatabaseName: dbName,

@@ -3,6 +3,7 @@ syntax = "proto3";
 package eventstore;
 
 option go_package = "toremo.com/eventstore";
+option java_package = "com.github.spolab.eventstore";
 
 message Event {
   int64 event_id = 1;

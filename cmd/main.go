@@ -1,61 +1,51 @@
 package main
 
 import (
-	"context"
-	"net"
+	"flag"
+	"fmt"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"google.golang.org/grpc"
-	eventstore "toremo.com/petclinic/eventstore/gen"
-	"toremo.com/petclinic/eventstore/pkg/mongodb"
+	"github.com/spf13/cobra"
+	"toremo.com/petclinic/eventstore/cmd/server"
 )
 
 const (
-	LISTEN_ADDRESS = "LISTEN_ADDRESS"
+	ENV_BIND   = "EVENSTORE_BIND"
+	ENV_DRIVER = "EVENSTORE_DRIVER"
+	ENV_DB_URL = "EVENSTORE_DB_URL"
 )
 
 func main() {
+	var (
+		bind   string
+		driver string
+		dburl  string
+	)
+
+	// Setup the loggeer
 	logger := log.With().Str("component", "main").Logger()
 
-	// Read the parameters from the environment
-	err := godotenv.Load()
-	if err != nil && !os.IsNotExist(err) {
-		logger.Fatal().Err(err).Msg("error reading the .env file")
+	root := &cobra.Command{
+		Use: "eventstore",
 	}
-	addr := os.Getenv(LISTEN_ADDRESS)
+	root.AddCommand(server.ServerCommand)
 
-	// Allocate a listener
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		logger.Fatal().Str("address", addr).Err(err).Msg("error allocating the tcp listener")
+	if err := root.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	// Establishes a connection to the mongodb database
-	ctx := context.Background()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URL")))
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error establishing a connection to mongodb")
-	}
-	defer func() {
-		_ = client.Disconnect(ctx)
-	}()
+	os.Exit(0)
 
-	// Creates the server and registers the service
-	server := grpc.NewServer()
-	impl, err := mongodb.NewMongoDriver(ctx, client, "eventstore")
-	if err != nil {
-		logger.Fatal().Err(err).Msg("creating the driver")
-	}
-	eventstore.RegisterEventStoreServer(server, impl)
+	// Load the configuration parameters
+	flag.StringVar(&bind, "bind", "0.0.0.0:9000", "The address to bind the service to")
+	flag.StringVar(&driver, "driver", "", "The database driver to use (mongodb or postgresql)")
+	flag.StringVar(&dburl, "db-url", "", "The connection URL to connect to the database")
+	flag.Parse()
 
-	// Start the serveer
-	logger.Info().Str("address", addr).Msg("server started")
-	err = server.Serve(listener)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("starting the server")
+	// Validate the parameters
+	if bind == "" {
+		logger.Fatal().Msg("bind address must be specified")
 	}
 }
