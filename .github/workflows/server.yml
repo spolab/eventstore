@@ -19,7 +19,7 @@ env:
 
 jobs:
 
-  AllInOne:
+  e2e:
     runs-on: ubuntu-latest
     services:
       postgres:
