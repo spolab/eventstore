@@ -64,6 +64,9 @@ jobs:
       - name: Download the Go dependencies
         run: cd server && go mod download
 
+      - name: Create folder for thee gRPC stubs
+        run: mkdir -p server/gen
+
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
