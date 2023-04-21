@@ -5,6 +5,7 @@ package eventstore;
 option go_package = "toremo.com/eventstore";
 option java_package = "com.github.spolab.eventstore";
 
+// An event as it is returned from the Get event
 message Event {
   int64 event_id = 1;
   string stream_id = 2;
@@ -16,7 +17,7 @@ message Event {
   string timestamp = 9;
 }
 
-message AppendRequest {
+message AppendEventRequest {
   string stream_id = 1;
   int64 expected_version = 2; 
   string event_type = 3;
@@ -25,18 +26,37 @@ message AppendRequest {
   bytes data = 7;
 }
 
-message AppendResponse {
+message AppendEventResponse {
 }
 
-message GetRequest {
+message GetStreamEventsRequest {
   string stream_id = 1;
 }
 
-message GetResponse {
+message GetStreamEventsResponse {
   repeated Event events = 1;
 }
 
+message GetStreamInfoRequest {
+  string stream_id = 1;
+}
+
+message GetStreamInfoResponse {
+  int64 version = 1;
+}
+
+message GetEventRequest {
+  string stream_id = 1;
+  int64 version = 2;
+}
+
+message GetEventResponse {
+  Event event = 1;
+}
+
 service EventStore {
-  rpc Append(AppendRequest) returns (AppendResponse) {}
-  rpc Get(GetRequest) returns (GetResponse) {}
+  rpc AppendEvent(AppendEventRequest) returns (AppendEventResponse) {}
+  rpc GetStreamEvents(GetStreamEventsRequest) returns (GetStreamEventsResponse) {}
+  rpc GetStreamInfo(GetStreamInfoRequest) returns (GetStreamInfoResponse) {}
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse) {}
 }

@@ -34,7 +34,7 @@ func TestAppendEvent(t *testing.T) {
 
 	t.Run("FirstInsertReturns1", func(t *testing.T) {
 		// Create a new stream_id and event_id
-		request := &v1.AppendRequest{
+		request := &v1.AppendEventRequest{
 			StreamId:        streamId,
 			ExpectedVersion: 0,
 			EventType:       "event_type_1",
@@ -43,14 +43,14 @@ func TestAppendEvent(t *testing.T) {
 			Data:            []byte(`{"key_1": "value_1"}`),
 		}
 		// Call the function with expected_version = 0 (should insert the first event)
-		res, err := driver.Append(context.Background(), request)
+		res, err := driver.AppendEvent(context.Background(), request)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 	})
 
 	t.Run("SecondInsertReturns2", func(t *testing.T) {
 		// Create a new stream_id and event_id
-		request := &v1.AppendRequest{
+		request := &v1.AppendEventRequest{
 			StreamId:        streamId,
 			ExpectedVersion: 1,
 			EventType:       "event_type_2",
@@ -59,14 +59,14 @@ func TestAppendEvent(t *testing.T) {
 			Data:            []byte(`{"key_2": "value_2"}`),
 		}
 		// Call the function with expected_version = 1 (should insert the second event)
-		res, err := driver.Append(context.Background(), request)
+		res, err := driver.AppendEvent(context.Background(), request)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 	})
 
 	t.Run("StaleInsertReturnsError", func(t *testing.T) {
 		// Create a new stream_id and event_id
-		request := &v1.AppendRequest{
+		request := &v1.AppendEventRequest{
 			StreamId:        streamId,
 			ExpectedVersion: 1,
 			EventType:       "event_type_3",
@@ -75,7 +75,7 @@ func TestAppendEvent(t *testing.T) {
 			Data:            []byte(`{"key_3": "value_3"}`),
 		}
 		// Call the function with expected_version = 0 (should fail because stream version is 2)
-		res, err := driver.Append(context.Background(), request)
+		res, err := driver.AppendEvent(context.Background(), request)
 		assert.Error(t, err)
 		assert.Equal(t, "pq: Expected stream_version 1 but got 2", err.Error())
 		assert.Nil(t, res)
@@ -103,13 +103,13 @@ func TestGetEventsByStream(t *testing.T) {
 	eventData2 := []byte(`{"name": "event2"}`)
 
 	// Insert some test data into the database using AppendEvent
-	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: "event1", Encoding: "encoding1", Source: "source1", Data: eventData1})
+	_, err = driver.AppendEvent(context.Background(), &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 0, EventType: "event1", Encoding: "encoding1", Source: "source1", Data: eventData1})
 	require.NoError(t, err)
-	_, err = driver.Append(context.Background(), &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "event2", Encoding: "encoding2", Source: "source2", Data: eventData2})
+	_, err = driver.AppendEvent(context.Background(), &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "event2", Encoding: "encoding2", Source: "source2", Data: eventData2})
 	require.NoError(t, err)
 
 	// Call the function being tested
-	res, err := driver.Get(context.Background(), &v1.GetRequest{StreamId: streamID})
+	res, err := driver.GetStreamEvents(context.Background(), &v1.GetStreamEventsRequest{StreamId: streamID})
 
 	// Verify the results
 	require.NoError(t, err)

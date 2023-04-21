@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"toremo.com/petclinic/eventstore/cmd/event"
 	"toremo.com/petclinic/eventstore/cmd/server"
 )
 
@@ -23,13 +24,11 @@ func main() {
 		dburl  string
 	)
 
-	// Setup the loggeer
-	logger := log.With().Str("component", "main").Logger()
-
 	root := &cobra.Command{
 		Use: "eventstore",
 	}
 	root.AddCommand(server.ServerCommand)
+	root.AddCommand(event.EventCommand)
 
 	if err := root.Execute(); err != nil {
 		fmt.Println(err)
@@ -46,6 +45,6 @@ func main() {
 
 	// Validate the parameters
 	if bind == "" {
-		logger.Fatal().Msg("bind address must be specified")
+		log.Fatal().Msg("bind address must be specified")
 	}
 }

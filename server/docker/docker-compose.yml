@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongo
+    hostname: mongo
+    networks:
+      - eda
+
+  eventstore:
+    build:
+      tags:
+        - ghcr.io/spolab/eventstore:latest
+      dockerfile: docker/Dockerfile
+      context: ..
+    command: server --driver mongodb --db-url mongodb://mongo:27017/eventstore --grpc-addr=0.0.0.0:9000
+    container_name: eventstore
+    hostname: eventstore
+    networks:
+      - eda
+    ports:
+      - 9000:9000
+
+networks:
+  eda: {}

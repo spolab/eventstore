@@ -42,7 +42,7 @@ type Event struct {
 }
 
 // Append appends a new event to the specified stream.
-func (md *MongoDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.AppendResponse, error) {
+func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
 	log.Info().Msg("Start Append")
 	// Start a new session and defer its closure
 	// Get the streams and events collections
@@ -95,10 +95,10 @@ func (md *MongoDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.A
 		return nil, err
 	}
 	log.Info().Msg("End Append")
-	return &v1.AppendResponse{}, nil
+	return &v1.AppendEventResponse{}, nil
 }
 
-func (d *MongoDriver) Get(ctx context.Context, req *v1.GetRequest) (*v1.GetResponse, error) {
+func (d *MongoDriver) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
 	eventsCollection := d.Client.Database(d.DatabaseName).Collection(EventsCollectionName)
 
 	filter := bson.M{"stream_id": req.StreamId}
@@ -123,7 +123,7 @@ func (d *MongoDriver) Get(ctx context.Context, req *v1.GetRequest) (*v1.GetRespo
 		return nil, err
 	}
 
-	return &v1.GetResponse{Events: events}, nil
+	return &v1.GetStreamEventsResponse{Events: events}, nil
 }
 
 func NewMongoDriver(ctx context.Context, client *mongo.Client, dbName string) (*MongoDriver, error) {

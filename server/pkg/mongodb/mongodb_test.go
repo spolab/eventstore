@@ -15,7 +15,7 @@ import (
 	"toremo.com/petclinic/eventstore/pkg/mongodb"
 )
 
-func TestAppend(t *testing.T) {
+func TestAppendEvent(t *testing.T) {
 	require.NoError(t, godotenv.Load())
 	ctx := context.Background()
 	// Set up a new MongoDriver instance with a test database
@@ -42,10 +42,10 @@ func TestAppend(t *testing.T) {
 		eventEncoding := "test_encoding"
 		eventData := []byte("test_data")
 
-		req := &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData}
+		req := &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData}
 
 		// Append the new event to the stream
-		res, err := driver.Append(ctx, req)
+		res, err := driver.AppendEvent(ctx, req)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 
@@ -89,16 +89,16 @@ func TestAppend(t *testing.T) {
 		eventData1 := []byte("test_data_1")
 		eventData2 := []byte("test_data_2")
 
-		req1 := &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData1}
-		req2 := &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 1, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData2}
+		req1 := &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData1}
+		req2 := &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 1, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData2}
 
 		// Append the first event to the stream
-		res, err := driver.Append(ctx, req1)
+		res, err := driver.AppendEvent(ctx, req1)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 
 		// Append the second event to the stream
-		res, err = driver.Append(ctx, req2)
+		res, err = driver.AppendEvent(ctx, req2)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 
@@ -157,16 +157,16 @@ func TestAppend(t *testing.T) {
 		eventData1 := []byte("test_data_1")
 		eventData2 := []byte("test_data_2")
 
-		req1 := &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData1}
-		req2 := &v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData2}
+		req1 := &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData1}
+		req2 := &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 0, EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData2}
 
 		// Append the first event to the stream
-		res, err := driver.Append(ctx, req1)
+		res, err := driver.AppendEvent(ctx, req1)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 
 		// Try to append the second event to the stream with an incorrect expected version
-		res, err = driver.Append(ctx, req2)
+		res, err = driver.AppendEvent(ctx, req2)
 		require.Error(t, err)
 		assert.Nil(t, res)
 		assert.Contains(t, err.Error(), "optimistic concurrency violation: expected version 0, actual version 1")
@@ -231,13 +231,13 @@ func TestGetEventsForStream(t *testing.T) {
 
 		// Insert some test events
 		streamID := "test_stream"
-		req1 := v1.AppendRequest{StreamId: streamID, ExpectedVersion: 0, EventType: "test_event_1", Source: "test_source", Encoding: "test_encoding", Data: []byte("test_data_1")}
-		req2 := v1.AppendRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "test_event_2", Source: "test_source", Encoding: "test_encoding", Data: []byte("test_data_2")}
-		driver.Append(ctx, &req1)
-		driver.Append(ctx, &req2)
+		req1 := v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 0, EventType: "test_event_1", Source: "test_source", Encoding: "test_encoding", Data: []byte("test_data_1")}
+		req2 := v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: 1, EventType: "test_event_2", Source: "test_source", Encoding: "test_encoding", Data: []byte("test_data_2")}
+		driver.AppendEvent(ctx, &req1)
+		driver.AppendEvent(ctx, &req2)
 
 		// Get the events for the stream
-		res, err := driver.Get(ctx, &v1.GetRequest{StreamId: streamID})
+		res, err := driver.GetStreamEvents(ctx, &v1.GetStreamEventsRequest{StreamId: streamID})
 		require.NoError(t, err)
 
 		// Verify that the events have the expected values
@@ -262,7 +262,7 @@ func TestGetEventsForStream(t *testing.T) {
 		require.NoError(t, eventsCollection.Drop(ctx))
 
 		// Attempt to retrieve events for a non-existing stream
-		events, err := driver.Get(ctx, &v1.GetRequest{StreamId: "non_existing_stream"})
+		events, err := driver.GetStreamEvents(ctx, &v1.GetStreamEventsRequest{StreamId: "non_existing_stream"})
 		require.NoError(t, err)
 
 		// Verify that an empty list of events is returned
@@ -303,7 +303,7 @@ func TestNewMongoDriver(t *testing.T) {
 
 }
 
-func BenchmarkAppend(b *testing.B) {
+func BenchmarkAppendEvent(b *testing.B) {
 	require.NoError(b, godotenv.Load())
 	ctx := context.Background()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URL")))
@@ -330,8 +330,8 @@ func BenchmarkAppend(b *testing.B) {
 
 	// Execute the test multiple times
 	for i := 0; i < b.N; i++ {
-		ev := &v1.AppendRequest{StreamId: streamID, ExpectedVersion: int64(i), EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData}
-		res, err := driver.Append(ctx, ev)
+		ev := &v1.AppendEventRequest{StreamId: streamID, ExpectedVersion: int64(i), EventType: eventType, Source: eventSource, Encoding: eventEncoding, Data: eventData}
+		res, err := driver.AppendEvent(ctx, ev)
 		require.NoError(b, err)
 		assert.NotNil(b, res)
 	}

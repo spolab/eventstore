@@ -15,16 +15,16 @@ type PostgresDriver struct {
 	db *sql.DB
 }
 
-func (pd *PostgresDriver) Append(ctx context.Context, req *v1.AppendRequest) (*v1.AppendResponse, error) {
+func (pd *PostgresDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
 	_, err := pd.db.Exec("CALL append_event($1, $2, $3, $4, $5, $6)", req.StreamId, req.ExpectedVersion, req.EventType, req.Encoding, req.Source, req.Data)
 	if err != nil {
 		return nil, err
 	}
-	return &v1.AppendResponse{}, nil
+	return &v1.AppendEventResponse{}, nil
 }
 
 // GetEventsByStream retrieves all events belonging to a specific stream_id
-func (pd *PostgresDriver) Get(ctx context.Context, req *v1.GetRequest) (*v1.GetResponse, error) {
+func (pd *PostgresDriver) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
 	logger := log.With().Str("function", "Get").Str("stream_id", req.StreamId).Logger() // Create a logger with the function name
 
 	logger.Info().Msg("Retrieving events by stream_id") // Log an info message
@@ -53,7 +53,7 @@ func (pd *PostgresDriver) Get(ctx context.Context, req *v1.GetRequest) (*v1.GetR
 
 	logger.Info().Int("num_events", len(events)).Msg("Retrieved events by stream_id") // Log an info message
 
-	return &v1.GetResponse{Events: events}, nil
+	return &v1.GetStreamEventsResponse{Events: events}, nil
 }
 
 func NewPostgresDriver(db *sql.DB) (*PostgresDriver, error) {
