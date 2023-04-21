@@ -169,7 +169,7 @@ func TestAppendEvent(t *testing.T) {
 		res, err = driver.AppendEvent(ctx, req2)
 		require.Error(t, err)
 		assert.Nil(t, res)
-		assert.Contains(t, err.Error(), mongodb.ErrInvalidStreamVersion)
+		assert.Contains(t, err.Error(), mongodb.ErrStreamAlreadyExists)
 
 		// Check that only one event was inserted into the events collection with the correct values
 		eventCursor, err := eventsCollection.Find(ctx, bson.M{"stream_id": streamID})
