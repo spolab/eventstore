@@ -2,7 +2,7 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -15,6 +15,11 @@ import (
 const (
 	StreamsCollectionName = "streams"
 	EventsCollectionName  = "events"
+)
+
+var (
+	ErrStreamAlreadyExists  = errors.New("stream already exists")
+	ErrInvalidStreamVersion = errors.New("invalid stream version")
 )
 
 type MongoDriver struct {
@@ -51,27 +56,25 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 
 	// Define a filter and update document for the upsert operation
 	filter := bson.M{"_id": req.StreamId, "stream_version": req.ExpectedVersion}
-	update := bson.M{"$setOnInsert": bson.M{"_id": req.StreamId, "stream_version": 1}}
+	update := bson.M{"$inc": bson.M{"stream_version": 1}}
 
 	if req.ExpectedVersion == 0 {
 		// Perform the upsert operation on the streams collection
-		_, err := streamsCollection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+		_, err := streamsCollection.InsertOne(ctx, &Stream{ID: req.StreamId, StreamVersion: 1})
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
-				return nil, fmt.Errorf("optimistic concurrency violation: another client created the stream at the same time")
+				return nil, ErrStreamAlreadyExists
 			}
 			return nil, err
 		}
 	} else {
-		// Find the stream with the specified streamID and check for optimistic concurrency
-		streamFilter := bson.M{"_id": req.StreamId}
-		streamResult := streamsCollection.FindOne(ctx, streamFilter)
-		var stream Stream
-		if err := streamResult.Decode(&stream); err != nil {
+		// Perform the update operation on the streams collection
+		updateResult, err := streamsCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
 			return nil, err
 		}
-		if stream.StreamVersion != req.ExpectedVersion {
-			return nil, fmt.Errorf("optimistic concurrency violation: expected version %d, actual version %d", req.GetExpectedVersion(), stream.StreamVersion)
+		if updateResult.ModifiedCount != 1 {
+			return nil, ErrInvalidStreamVersion
 		}
 	}
 
