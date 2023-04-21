@@ -75,7 +75,7 @@ jobs:
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
-          args: server/...
+          args: -w server server/...
 
       - name: Build the EventStore binary
         run: cd server && go build -o bin/eventstore cmd/main.go
