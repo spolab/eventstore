@@ -44,46 +44,41 @@ type Event struct {
 // Append appends a new event to the specified stream.
 func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
 	log.Info().Msg("Start Append")
-	// Start a new session and defer its closure
+
 	// Get the streams and events collections
 	streamsCollection := md.Client.Database(md.DatabaseName).Collection(StreamsCollectionName)
 	eventsCollection := md.Client.Database(md.DatabaseName).Collection(EventsCollectionName)
 
-	// Find the stream with the specified streamID
-	streamFilter := bson.M{"_id": req.StreamId}
-	streamResult := streamsCollection.FindOne(ctx, streamFilter)
+	// Define a filter and update document for the upsert operation
+	filter := bson.M{"_id": req.StreamId, "stream_version": req.ExpectedVersion}
+	update := bson.M{"$setOnInsert": bson.M{"_id": req.StreamId, "stream_version": 1}}
 
-	var stream Stream
-	if err := streamResult.Decode(&stream); err != nil {
-		// Stream not found, so create a new stream with stream_version 0
-		stream = Stream{
-			ID:            req.StreamId,
-			StreamVersion: 1,
-		}
-		if _, err := streamsCollection.InsertOne(ctx, stream); err != nil {
+	if req.ExpectedVersion == 0 {
+		// Perform the upsert operation on the streams collection
+		_, err := streamsCollection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				return nil, fmt.Errorf("optimistic concurrency violation: another client created the stream at the same time")
 			}
 			return nil, err
 		}
 	} else {
-		// Stream found, so check for optimistic concurrency
+		// Find the stream with the specified streamID and check for optimistic concurrency
+		streamFilter := bson.M{"_id": req.StreamId}
+		streamResult := streamsCollection.FindOne(ctx, streamFilter)
+		var stream Stream
+		if err := streamResult.Decode(&stream); err != nil {
+			return nil, err
+		}
 		if stream.StreamVersion != req.ExpectedVersion {
 			return nil, fmt.Errorf("optimistic concurrency violation: expected version %d, actual version %d", req.GetExpectedVersion(), stream.StreamVersion)
 		}
-		stream.StreamVersion++
-		updateResult, err := streamsCollection.UpdateOne(ctx, streamFilter, bson.M{"$set": bson.M{"stream_version": stream.StreamVersion}})
-		if err != nil {
-			return nil, err
-		}
-		if updateResult.ModifiedCount != 1 {
-			return nil, fmt.Errorf("failed to update stream version")
-		}
 	}
 
+	// At this point, we have ensured that the stream version is correct, so we can insert the new event
 	newEvent := Event{
 		StreamID:      req.GetStreamId(),
-		StreamVersion: stream.StreamVersion,
+		StreamVersion: req.ExpectedVersion + 1,
 		Kind:          req.GetEventType(),
 		Source:        req.GetSource(),
 		Encoding:      req.GetEncoding(),
@@ -94,9 +89,67 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 	if _, err := eventsCollection.InsertOne(ctx, newEvent); err != nil {
 		return nil, err
 	}
+
 	log.Info().Msg("End Append")
 	return &v1.AppendEventResponse{}, nil
 }
+
+// Append appends a new event to the specified stream.
+// func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
+// 	log.Info().Msg("Start Append")
+// 	// Start a new session and defer its closure
+// 	// Get the streams and events collections
+// 	streamsCollection := md.Client.Database(md.DatabaseName).Collection(StreamsCollectionName)
+// 	eventsCollection := md.Client.Database(md.DatabaseName).Collection(EventsCollectionName)
+
+// 	// Find the stream with the specified streamID
+// 	streamFilter := bson.M{"_id": req.StreamId}
+// 	streamResult := streamsCollection.FindOne(ctx, streamFilter)
+
+// 	var stream Stream
+// 	if err := streamResult.Decode(&stream); err != nil {
+// 		// Stream not found, so create a new stream with stream_version 0
+// 		stream = Stream{
+// 			ID:            req.StreamId,
+// 			StreamVersion: 1,
+// 		}
+// 		if _, err := streamsCollection.InsertOne(ctx, stream); err != nil {
+// 			if mongo.IsDuplicateKeyError(err) {
+// 				return nil, fmt.Errorf("optimistic concurrency violation: another client created the stream at the same time")
+// 			}
+// 			return nil, err
+// 		}
+// 	} else {
+// 		// Stream found, so check for optimistic concurrency
+// 		if stream.StreamVersion != req.ExpectedVersion {
+// 			return nil, fmt.Errorf("optimistic concurrency violation: expected version %d, actual version %d", req.GetExpectedVersion(), stream.StreamVersion)
+// 		}
+// 		stream.StreamVersion++
+// 		updateResult, err := streamsCollection.UpdateOne(ctx, streamFilter, bson.M{"$set": bson.M{"stream_version": stream.StreamVersion}})
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		if updateResult.ModifiedCount != 1 {
+// 			return nil, fmt.Errorf("failed to update stream version")
+// 		}
+// 	}
+
+// 	newEvent := Event{
+// 		StreamID:      req.GetStreamId(),
+// 		StreamVersion: stream.StreamVersion,
+// 		Kind:          req.GetEventType(),
+// 		Source:        req.GetSource(),
+// 		Encoding:      req.GetEncoding(),
+// 		Data:          req.GetData(),
+// 		Timestamp:     time.Now().String(),
+// 	}
+
+// 	if _, err := eventsCollection.InsertOne(ctx, newEvent); err != nil {
+// 		return nil, err
+// 	}
+// 	log.Info().Msg("End Append")
+// 	return &v1.AppendEventResponse{}, nil
+// }
 
 func (d *MongoDriver) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
 	eventsCollection := d.Client.Database(d.DatabaseName).Collection(EventsCollectionName)
