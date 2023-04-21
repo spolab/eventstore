@@ -1,13 +1,21 @@
 name: EventStore
 
-on: [push, pull_request]
+on: 
+  push:
+    paths:
+      - server/**/*
+      - schema/*
+  pull_request:
+    paths:
+      - server/**/*
+      - schema/*
 
 env:
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: password123
   POSTGRES_DB: test
   POSTGRES_URL: postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/$POSTGRES_DB?sslmode=disable
-  PROTOC_OPTS: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+  PROTOC_OPTS: -Ischema --go_out=paths=source_relative:server/gen --go-grpc_out=paths=source_relative:server/gen schema/eventstore.proto
 
 jobs:
 
@@ -46,9 +54,9 @@ jobs:
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
-          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+          args: -Ischema --go_out=paths=source_relative:server/gen --go-grpc_out=paths=source_relative:server/gen schema/eventstore.proto
       - name: Test the code
-        run: go test -v ./...
+        run: go test -v server/...
 
   lint:
     runs-on: ubuntu-latest
@@ -60,11 +68,11 @@ jobs:
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
-          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+          args: -Ischema --go_out=paths=source_relative:server/gen --go-grpc_out=paths=source_relative:server/gen schema/eventstore.proto
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: server/...
 
   build:
     runs-on: ubuntu-latest
@@ -76,14 +84,14 @@ jobs:
       - name: Generate the gRPC stubs
         uses: spolab/protoc-action@v0.0.13
         with:
-          args: -Ischema --go_out=paths=source_relative:gen --go-grpc_out=paths=source_relative:gen ./schema/eventstore.proto
+          args: -Ischema --go_out=paths=source_relative:server/gen --go-grpc_out=paths=source_relative:server/gen schema/eventstore.proto
       - name: Build the EventStore binary
-        run: CGO_ENABLED=0 go build -o bin/eventstore cmd/main.go
+        run: go build -o bin/eventstore cmd/main.go
       - name: Archive production artifacts
         uses: actions/upload-artifact@v3
         with:
           name: eventstore
-          path: bin/eventstore
+          path: server/bin/eventstore
 
   publish:
     runs-on: ubuntu-latest
@@ -94,7 +102,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: eventstore
-          path: bin/eventstore
+          path: server/bin/eventstore
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v1
         with:
@@ -104,8 +112,8 @@ jobs:
       - name: Release Docker Image
         uses: docker/build-push-action@v4
         with:
-          context: .
-          file: docker/Dockerfile
+          context: server
+          file: server/docker/Dockerfile
           push: true
           tags: ghcr.io/spolab/eventstore:${{ github.ref_name }}
           args: version=${{ github.ref_name }}
