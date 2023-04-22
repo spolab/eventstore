@@ -24,35 +24,39 @@ CREATE TABLE events (
 
 CREATE INDEX stream_events_stream_version_idx ON events(stream_id, stream_version);
 
-CREATE PROCEDURE append_event(
-    IN p_stream_id CHAR(36),
-    IN p_expected_version INTEGER,
-    IN p_event_type TEXT,
-    IN p_event_encoding TEXT,
-    IN p_event_source TEXT,
-    IN p_event_data BYTEA
-)
-LANGUAGE plpgsql
-AS $$
+CREATE OR REPLACE FUNCTION append_event(
+    p_stream_id VARCHAR,
+    p_expected_version BIGINT,
+    p_event_type VARCHAR,
+    p_source VARCHAR,
+    p_encoding VARCHAR,
+    p_data BYTEA
+) RETURNS VOID AS $$
 DECLARE
-  new_version INTEGER;
+    affected_rows INTEGER;
 BEGIN
-  BEGIN
-    SELECT stream_version INTO STRICT new_version FROM streams WHERE stream_id = p_stream_id FOR UPDATE;
-  EXCEPTION
-  WHEN NO_DATA_FOUND THEN
-    new_version := 0;
-    INSERT INTO streams (stream_id, stream_version) VALUES (p_stream_id, new_version);
-  END;
+    IF p_expected_version = 0 THEN
+        BEGIN
+            INSERT INTO streams (stream_id, stream_version)
+            VALUES (p_stream_id, 1);
+        EXCEPTION WHEN unique_violation THEN
+            RAISE EXCEPTION 'Invalid stream version';
+        END;
+    ELSE
+        BEGIN
+            UPDATE streams
+            SET stream_version = stream_version + 1
+            WHERE stream_id = p_stream_id AND stream_version = p_expected_version;
+            GET DIAGNOSTICS affected_rows = ROW_COUNT;
+            IF affected_rows <> 1 THEN
+                RAISE EXCEPTION 'Invalid stream version';
+            END IF;
+        EXCEPTION WHEN others THEN
+            RAISE EXCEPTION 'Error updating stream';
+        END;
+    END IF;
 
-  IF new_version = p_expected_version THEN
-    new_version := p_expected_version + 1;
-    INSERT INTO events (stream_id, stream_version, event_type, event_encoding, event_source, event_data, event_ts)
-    VALUES (p_stream_id, new_version, p_event_type, p_event_encoding, p_event_source, p_event_data, NOW());
-    UPDATE streams SET stream_version = new_version WHERE stream_id = p_stream_id;
-    RETURN;
-  END IF;
-
-  RAISE EXCEPTION 'Expected stream_version % but got %', p_expected_version, new_version;
+    INSERT INTO events (stream_id, stream_version, kind, source, encoding, data, timestamp)
+    VALUES (p_stream_id, p_expected_version + 1, p_event_type, p_source, p_encoding, p_data, NOW());
 END;
-$$;
+$$ LANGUAGE plpgsql;
