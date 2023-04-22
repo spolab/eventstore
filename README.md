@@ -1,1 +1,1 @@
-<*a href="https://snyk.io/test/github/spolab/eventstore">
+[![Known Vulnerabilities](https://snyk.io/test/github/spolab/eventstore/badge.svg)]
