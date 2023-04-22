@@ -24,14 +24,14 @@ CREATE TABLE events (
 
 CREATE INDEX stream_events_stream_version_idx ON events(stream_id, stream_version);
 
-CREATE OR REPLACE FUNCTION append_event(
+CREATE OR REPLACE PROCEDURE append_event(
     p_stream_id VARCHAR,
     p_expected_version BIGINT,
     p_event_type VARCHAR,
-    p_source VARCHAR,
     p_encoding VARCHAR,
+    p_source VARCHAR,
     p_data BYTEA
-) RETURNS VOID AS $$
+) LANGUAGE plpgsql AS $$
 DECLARE
     affected_rows INTEGER;
 BEGIN
@@ -51,12 +51,10 @@ BEGIN
             IF affected_rows <> 1 THEN
                 RAISE EXCEPTION 'Invalid stream version';
             END IF;
-        EXCEPTION WHEN others THEN
-            RAISE EXCEPTION 'Error updating stream';
         END;
     END IF;
 
-    INSERT INTO events (stream_id, stream_version, kind, source, encoding, data, timestamp)
-    VALUES (p_stream_id, p_expected_version + 1, p_event_type, p_source, p_encoding, p_data, NOW());
+    INSERT INTO events (stream_id, stream_version, event_type, event_encoding, event_source, event_data, event_ts)
+    VALUES (p_stream_id, p_expected_version + 1, p_event_type, p_encoding, p_source, p_data, NOW());
 END;
-$$ LANGUAGE plpgsql;
+$$;

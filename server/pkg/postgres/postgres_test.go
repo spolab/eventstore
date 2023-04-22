@@ -7,16 +7,24 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "toremo.com/petclinic/eventstore/gen"
+	"toremo.com/petclinic/eventstore/pkg/errors"
 	"toremo.com/petclinic/eventstore/pkg/postgres"
 )
 
 func TestAppendEvent(t *testing.T) {
+	err := godotenv.Load()
+	if err != nil {
+		require.True(t, os.IsNotExist(err))
+	}
 	// Open a connection to the database
 	db, err := sql.Open("postgres", os.Getenv(("POSTGRES_URL")))
+	log.Info().Str("url", os.Getenv("POSTGRES_URL")).Msg("starting TestAppendEvent")
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -77,7 +85,7 @@ func TestAppendEvent(t *testing.T) {
 		// Call the function with expected_version = 0 (should fail because stream version is 2)
 		res, err := driver.AppendEvent(context.Background(), request)
 		assert.Error(t, err)
-		assert.Equal(t, "pq: Expected stream_version 1 but got 2", err.Error())
+		assert.Equal(t, errors.InvalidStreamVersionError(), err)
 		assert.Nil(t, res)
 	})
 }

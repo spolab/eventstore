@@ -3,12 +3,14 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/rs/zerolog/log"
 	v1 "toremo.com/petclinic/eventstore/gen"
+	"toremo.com/petclinic/eventstore/pkg/errors"
 )
+
+const errInvalidStreamVersion = "pq: Invalid stream version"
 
 type PostgresDriver struct {
 	v1.UnimplementedEventStoreServer
@@ -18,6 +20,9 @@ type PostgresDriver struct {
 func (pd *PostgresDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
 	_, err := pd.db.Exec("CALL append_event($1, $2, $3, $4, $5, $6)", req.StreamId, req.ExpectedVersion, req.EventType, req.Encoding, req.Source, req.Data)
 	if err != nil {
+		if err.Error() == errInvalidStreamVersion {
+			return nil, errors.InvalidStreamVersionError()
+		}
 		return nil, err
 	}
 	return &v1.AppendEventResponse{}, nil
@@ -58,7 +63,7 @@ func (pd *PostgresDriver) GetStreamEvents(ctx context.Context, req *v1.GetStream
 
 func NewPostgresDriver(db *sql.DB) (*PostgresDriver, error) {
 	if db == nil {
-		return nil, errors.New("database must not be nil")
+		return nil, fmt.Errorf("database must not be nil")
 	}
 	return &PostgresDriver{db: db}, nil
 }
