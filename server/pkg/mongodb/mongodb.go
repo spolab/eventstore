@@ -58,7 +58,7 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 		_, err := streamsCollection.InsertOne(ctx, &Stream{ID: req.StreamId, StreamVersion: 1})
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
-				return nil, errors.ErrStreamAlreadyExists
+				return nil, errors.InvalidStreamVersionError()
 			}
 			return nil, err
 		}
@@ -69,7 +69,7 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 			return nil, err
 		}
 		if updateResult.ModifiedCount != 1 {
-			return nil, errors.ErrInvalidStreamVersion
+			return nil, errors.InvalidStreamVersionError()
 		}
 	}
 
