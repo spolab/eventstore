@@ -2,7 +2,6 @@ package mongodb
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -10,16 +9,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	v1 "toremo.com/petclinic/eventstore/gen"
+	"toremo.com/petclinic/eventstore/pkg/errors"
 )
 
 const (
 	StreamsCollectionName = "streams"
 	EventsCollectionName  = "events"
-)
-
-var (
-	ErrStreamAlreadyExists  = errors.New("stream already exists")
-	ErrInvalidStreamVersion = errors.New("invalid stream version")
 )
 
 type MongoDriver struct {
@@ -63,7 +58,7 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 		_, err := streamsCollection.InsertOne(ctx, &Stream{ID: req.StreamId, StreamVersion: 1})
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
-				return nil, ErrStreamAlreadyExists
+				return nil, errors.ErrStreamAlreadyExists
 			}
 			return nil, err
 		}
@@ -74,7 +69,7 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 			return nil, err
 		}
 		if updateResult.ModifiedCount != 1 {
-			return nil, ErrInvalidStreamVersion
+			return nil, errors.ErrInvalidStreamVersion
 		}
 	}
 
