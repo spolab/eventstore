@@ -1,0 +1,1 @@
+<*a href="https://snyk.io/test/github/spolab/eventstore">
