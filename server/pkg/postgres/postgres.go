@@ -12,24 +12,39 @@ import (
 
 const errInvalidStreamVersion = "pq: Invalid stream version"
 
-type PostgresDriver struct {
-	v1.UnimplementedEventStoreServer
+type PostgresJournal struct {
+	v1.UnimplementedJournalServer
 	db *sql.DB
 }
 
-func (pd *PostgresDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
-	_, err := pd.db.Exec("CALL append_event($1, $2, $3, $4, $5, $6)", req.StreamId, req.ExpectedVersion, req.EventType, req.Encoding, req.Source, req.Data)
+func (pd *PostgresJournal) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
+
+	// Initialize a transaction so that the writes are atomic
+	tx, err := pd.db.BeginTx(ctx, nil)
 	if err != nil {
+		return nil, err
+	}
+
+	// Executes the stored procedure from within the transaction
+	_, err = tx.Exec("CALL append_event($1, $2, $3, $4, $5, $6)", req.StreamId, req.ExpectedVersion, req.EventType, req.Encoding, req.Source, req.Data)
+	if err != nil {
+		// In case of error, we translate a known error and attempt a rollback
 		if err.Error() == errInvalidStreamVersion {
-			return nil, errors.InvalidStreamVersionError()
+			err = errors.InvalidStreamVersionError()
 		}
+		_ = tx.Rollback()
+		return nil, err
+	}
+
+	// Executes the commit and reports an error if it fails, or the response if it succeeds
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	return &v1.AppendEventResponse{}, nil
 }
 
 // GetEventsByStream retrieves all events belonging to a specific stream_id
-func (pd *PostgresDriver) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
+func (pd *PostgresJournal) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
 	logger := log.With().Str("function", "Get").Str("stream_id", req.StreamId).Logger() // Create a logger with the function name
 
 	logger.Info().Msg("Retrieving events by stream_id") // Log an info message
@@ -61,9 +76,9 @@ func (pd *PostgresDriver) GetStreamEvents(ctx context.Context, req *v1.GetStream
 	return &v1.GetStreamEventsResponse{Events: events}, nil
 }
 
-func NewPostgresDriver(db *sql.DB) (*PostgresDriver, error) {
+func NewPostgresDriver(db *sql.DB) (*PostgresJournal, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database must not be nil")
 	}
-	return &PostgresDriver{db: db}, nil
+	return &PostgresJournal{db: db}, nil
 }

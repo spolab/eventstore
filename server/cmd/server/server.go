@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -56,17 +57,24 @@ func serverCommandImpl(cmd *cobra.Command, args []string) error {
 
 	// Creates the server and registers the service
 	server := grpc.NewServer()
-	impl, err := mongodb.NewMongoDriver(ctx, client, "eventstore")
+	impl, err := mongodb.NewMongoJournal(ctx, client, "eventstore")
 	if err != nil {
 		return err
 	}
-	eventstore.RegisterEventStoreServer(server, impl)
+	eventstore.RegisterJournalServer(server, impl)
 
-	// Start the serveer
-	log.Info().Str("address", bind).Msg("server started")
-	err = server.Serve(listener)
-	if err != nil {
-		return err
-	}
-	return nil
+	// Start the servers )both GRPC and HTTP.
+	// They get started as two separate goroutines and a wait group will make sure that
+	// the service won't stop until both goroutines are complete.
+	var grpcErr error
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		log.Info().Str("address", bind).Msg("server started")
+		grpcErr = server.Serve(listener)
+	}()
+	wg.Wait()
+	log.Info().Str("address", bind).Msg("server stopped")
+	return grpcErr
 }

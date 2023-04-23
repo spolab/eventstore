@@ -26,7 +26,7 @@ func TestAppendEvent(t *testing.T) {
 		require.NoError(t, client.Disconnect(ctx))
 	}()
 	dbName := "test_db"
-	driver := &mongodb.MongoDriver{Client: client, DatabaseName: dbName}
+	driver := &mongodb.MongoJournal{Client: client, DatabaseName: dbName}
 
 	t.Run("EventStreamEmpty", func(t *testing.T) {
 		// Drop the streams and events collections before the test
@@ -219,7 +219,7 @@ func TestGetEventsForStream(t *testing.T) {
 	}()
 
 	dbName := "test_db"
-	driver := &mongodb.MongoDriver{Client: client, DatabaseName: dbName}
+	driver := &mongodb.MongoJournal{Client: client, DatabaseName: dbName}
 
 	t.Run("ExistingStream", func(t *testing.T) {
 		// Drop the collections to ensure a clean state
@@ -290,7 +290,7 @@ func TestNewMongoDriver(t *testing.T) {
 	require.NoError(t, streamsCollection.Drop(ctx))
 
 	// Create a new MongoDriver instance
-	driver, err := mongodb.NewMongoDriver(ctx, client, dbName)
+	driver, err := mongodb.NewMongoJournal(ctx, client, dbName)
 	require.NoError(t, err)
 	assert.NotNil(t, driver)
 
@@ -314,7 +314,7 @@ func BenchmarkAppendEvent(b *testing.B) {
 	}()
 
 	dbName := "test_db"
-	driver := &mongodb.MongoDriver{Client: client, DatabaseName: dbName}
+	driver := &mongodb.MongoJournal{Client: client, DatabaseName: dbName}
 
 	// Drop the collections to ensure a clean state
 	streamsCollection := client.Database(dbName).Collection(mongodb.StreamsCollectionName)

@@ -54,7 +54,7 @@ message GetEventResponse {
   Event event = 1;
 }
 
-service EventStore {
+service Journal {
   rpc AppendEvent(AppendEventRequest) returns (AppendEventResponse) {}
   rpc GetStreamEvents(GetStreamEventsRequest) returns (GetStreamEventsResponse) {}
   rpc GetStreamInfo(GetStreamInfoRequest) returns (GetStreamInfoResponse) {}

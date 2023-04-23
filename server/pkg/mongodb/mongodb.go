@@ -17,8 +17,8 @@ const (
 	EventsCollectionName  = "events"
 )
 
-type MongoDriver struct {
-	v1.UnimplementedEventStoreServer
+type MongoJournal struct {
+	v1.UnimplementedJournalServer
 	Client       *mongo.Client
 	DatabaseName string
 }
@@ -42,7 +42,7 @@ type Event struct {
 }
 
 // Append appends a new event to the specified stream.
-func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
+func (md *MongoJournal) AppendEvent(ctx context.Context, req *v1.AppendEventRequest) (*v1.AppendEventResponse, error) {
 	log.Info().Msg("Start Append")
 
 	// Get the streams and events collections
@@ -149,7 +149,7 @@ func (md *MongoDriver) AppendEvent(ctx context.Context, req *v1.AppendEventReque
 // 	return &v1.AppendEventResponse{}, nil
 // }
 
-func (d *MongoDriver) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
+func (d *MongoJournal) GetStreamEvents(ctx context.Context, req *v1.GetStreamEventsRequest) (*v1.GetStreamEventsResponse, error) {
 	eventsCollection := d.Client.Database(d.DatabaseName).Collection(EventsCollectionName)
 
 	filter := bson.M{"stream_id": req.StreamId}
@@ -177,7 +177,7 @@ func (d *MongoDriver) GetStreamEvents(ctx context.Context, req *v1.GetStreamEven
 	return &v1.GetStreamEventsResponse{Events: events}, nil
 }
 
-func NewMongoDriver(ctx context.Context, client *mongo.Client, dbName string) (*MongoDriver, error) {
+func NewMongoJournal(ctx context.Context, client *mongo.Client, dbName string) (*MongoJournal, error) {
 	eventsCollection := client.Database(dbName).Collection(EventsCollectionName)
 	streamIndex := mongo.IndexModel{
 		Keys: bson.D{
@@ -191,7 +191,7 @@ func NewMongoDriver(ctx context.Context, client *mongo.Client, dbName string) (*
 		return nil, err
 	}
 	log.Info().Msg("initialized mongo driver")
-	return &MongoDriver{
+	return &MongoJournal{
 		Client:       client,
 		DatabaseName: dbName,
 	}, nil
